@@ -1,0 +1,8 @@
+This project is a studing of pandas on python by doing data transformations to my local bus service (SPTrans)
+
+The data is from 11/24/2026
+
+Data analysis observations:
+- The data only includes one trip per line, so the times can vary from real life timing
+- The times looks computer generated and are not really precise
+- NaN trip times for "volta" occours because circular lines only has data for "ida" trips, so the data for "volta" is NaN

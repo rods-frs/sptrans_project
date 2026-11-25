@@ -2,24 +2,25 @@
 
 import pandas as pd
 import tools
+import data_extraction
 
-raw_data = tools.read_csv("data/stop_times.csv") #get the CSV data
+routes_df = tools.read_csv("data/routes.csv")
+routes_df = routes_df[['route_id', 'route_long_name', 'route_color']]
 
-min_stops = raw_data.groupby("trip_id")["stop_sequence"].min() #get the first stop time, min() prevents dupplicates
-min_stops = pd.merge(min_stops, raw_data, on=['trip_id', 'stop_sequence']) #get only the rows which the data is from the first stop
+trips_df = tools.read_csv("data/trips.csv")
+trips_df = trips_df[['route_id', 'service_id']]
 
-start_time = min_stops[['trip_id', 'arrival_time']] #get only the trip_id and arrival_time columns
-start_time['arrival_time'] = pd.to_timedelta(start_time['arrival_time']) #transform the arrival_time into timedelta (cant be normal datetime because value can be >=24h)
-start_time = start_time.rename(columns={'arrival_time':'trip_start'}) #rename the column for better view
+trip_duration_df = data_extraction.get_trip_duration()
 
-max_stops = raw_data.groupby("trip_id")["stop_sequence"].max() #get the last trip from each trip_id
-max_stops = pd.merge(max_stops, raw_data, on=['trip_id', 'stop_sequence']) #get only the rows which the data is from the last stop
+final_df = pd.merge(routes_df, trips_df, on="route_id")
+final_df['merge_key'] = final_df['route_id']
+final_df = final_df.merge(trip_duration_df, on="merge_key")
+final_df = final_df.drop(columns={'trip_start_ida', 'trip_end_ida', 'trip_end_volta', 'trip_start_volta'})
 
-final_time = max_stops[['trip_id', 'arrival_time']] #removes unnecessary columns
-final_time = final_time.rename(columns={'arrival_time':'trip_end'}) #rename column for better view
-final_time['trip_end'] = pd.to_timedelta(final_time['trip_end']) #transform arrival_time to timedelta for the same reason as before
+final_df = final_df.drop_duplicates()
 
-result = pd.merge(start_time, final_time, on="trip_id") #merge the start and final tables to get the start and end of a trip in deltatime
-result['trip_duration'] = result['trip_end'] - result['trip_start'] #get the difference to get the trip duration
-result['trip_duration'] = result[result['trip_duration'] < pd.Timedelta(0)] + pd.Timedelta(days=1) #trips that finished after 12am would get negative deltas, so this adds 1 day to it
+print(tools.check_str_contains(final_df, 'route_id','7903'))
+
+print(final_df)
+
 
